@@ -1,2 +1,2 @@
 # CourtShuffle
-shuffle players onto courts
+shuffle players onto courts!
