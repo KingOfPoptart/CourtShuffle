@@ -28,11 +28,22 @@ function loadFromShareParam() {
     try {
         const decoded = JSON.parse(decodeURIComponent(atob(shareData)));
         const baseName = (decoded.gym ?? 'Shared Gym').trim() || 'Shared Gym';
+        const existingGym = appState.gyms.find((g) => g.name === baseName);
         let finalName = baseName;
-        let counter = 1;
-        const existingNames = new Set(appState.gyms.map((g) => g.name));
-        while (existingNames.has(finalName)) {
-            finalName = `${baseName} (${counter++})`;
+        if (existingGym) {
+            let counter = 1;
+            let numberedName = `${baseName} (${counter})`;
+            const existingNames = new Set(appState.gyms.map((g) => g.name));
+            while (existingNames.has(numberedName)) {
+                numberedName = `${baseName} (${++counter})`;
+            }
+            const replace = confirm(`A gym named "${baseName}" already exists.\n\nOK to replace it, or Cancel to add it as "${numberedName}".`);
+            if (replace) {
+                appState.removeGym(existingGym.id);
+            }
+            else {
+                finalName = numberedName;
+            }
         }
         const newGym = appState.addGym(finalName);
         newGym.resizeCourts(decoded.courts ?? 2);
