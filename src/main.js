@@ -186,7 +186,7 @@ function render() {
             />
           </li>`).join('')}
         </ul>
-        <p class="courts-hint">2–4 players per court · 3 players = Cutthroat</p>
+        <p class="courts-hint">2 to 4 players per court</p>
       </section>
 
       <!-- ── Shuffle ── -->
