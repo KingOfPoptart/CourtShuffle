@@ -53,10 +53,109 @@ header {
   border-radius: var(--radius);
 }
 
+.header-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 header h1 {
   font-size: 1.9rem;
   font-weight: 800;
   letter-spacing: -0.5px;
+}
+
+.btn-help {
+  position: absolute;
+  right: 0;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.btn-help:hover {
+  background: rgba(255,255,255,0.28);
+  border-color: rgba(255,255,255,0.6);
+}
+
+/* ===== Help modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: var(--surface);
+  border-radius: var(--radius);
+  max-width: 480px;
+  width: 100%;
+  max-height: 82dvh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+
+.modal-header h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--blue-dark);
+}
+
+.modal-close {
+  flex-shrink: 0;
+}
+
+.modal-body {
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.help-list dt {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--blue-dark);
+  margin-bottom: 0.2rem;
+}
+
+.help-list dd {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text);
+  margin-left: 0;
 }
 
 .subtitle {

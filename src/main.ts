@@ -5,9 +5,66 @@ const appState = AppState.load()
 let result: ShuffleResult | null = null
 let addingGym = false
 let renamingGym = false
+let showHelp = false
 
 function save() { appState.save() }
 function gym() { return appState.activeGym }
+
+// ── Share / URL params ────────────────────────────────────────────────────────
+
+function buildShareUrl(): string {
+  const g = gym()
+  const data = {
+    gym: g.name,
+    courts: g.numCourts,
+    courtNames: g.courtNames,
+    players: g.pool.map((p) => ({ name: p.name, pref: p.preferredCourt })),
+    present: g.pool.filter((p) => g.isPresent(p.id)).map((p) => p.name),
+  }
+  const encoded = btoa(encodeURIComponent(JSON.stringify(data)))
+  return `${window.location.origin}${window.location.pathname}?share=${encoded}`
+}
+
+function loadFromShareParam(): void {
+  const params = new URLSearchParams(window.location.search)
+  const shareData = params.get('share')
+  if (!shareData) return
+
+  try {
+    const decoded = JSON.parse(decodeURIComponent(atob(shareData))) as {
+      gym?: string
+      courts?: number
+      courtNames?: string[]
+      players?: { name: string; pref: number | null }[]
+      present?: string[]
+    }
+
+    const baseName = (decoded.gym ?? 'Shared Gym').trim() || 'Shared Gym'
+    let finalName = baseName
+    let counter = 1
+    const existingNames = new Set(appState.gyms.map((g) => g.name))
+    while (existingNames.has(finalName)) {
+      finalName = `${baseName} (${counter++})`
+    }
+
+    const newGym = appState.addGym(finalName)
+    newGym.resizeCourts(decoded.courts ?? 2)
+    if (decoded.courtNames) {
+      decoded.courtNames.forEach((name, i) => newGym.setCourtName(i + 1, name))
+    }
+    const presentSet = new Set(decoded.present ?? [])
+    if (decoded.players) {
+      decoded.players.forEach(({ name, pref }) => {
+        const player = newGym.addToPool(name)
+        player.preferredCourt = pref ?? null
+        if (presentSet.has(name)) newGym.presentIds.add(player.id)
+      })
+    }
+
+    appState.save()
+    window.history.replaceState({}, '', window.location.pathname)
+  } catch { /* invalid share data — ignore */ }
+}
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 
@@ -40,7 +97,10 @@ function render() {
 
   app.innerHTML = `
     <header>
-      <h1>🎾 CourtShuffle</h1>
+      <div class="header-inner">
+        <h1>🎾 CourtShuffle</h1>
+        <button class="btn btn-help" id="help-btn" aria-label="Help">?</button>
+      </div>
     </header>
 
     <!-- ── Gym bar ── -->
@@ -65,6 +125,7 @@ function render() {
         </select>
         <button class="btn btn-ghost btn-sm" id="new-gym-btn">+ New</button>
         <button class="btn btn-ghost btn-sm" id="rename-gym-btn">Edit</button>
+        <button class="btn btn-ghost btn-sm" id="share-gym-btn">Share</button>
         ${appState.gyms.length > 1
           ? `<button class="btn btn-ghost btn-sm btn-danger-ghost" id="delete-gym-btn">Delete</button>`
           : ''}
@@ -173,6 +234,46 @@ function render() {
     <footer class="app-footer">
       <button class="btn btn-clear-data" id="clear-data-btn">Clear all data</button>
     </footer>
+
+    ${showHelp ? `
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>How to use CourtShuffle</h2>
+          <button class="btn btn-ghost btn-sm modal-close" id="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <dl class="help-list">
+            <dt>Gyms</dt>
+            <dd>Create separate gyms for different venues. Use the gym bar to switch between them. Hit <strong>Share</strong> to copy a link that loads this gym's full config on any device.</dd>
+
+            <dt>Player Pool</dt>
+            <dd>Add players to build a permanent roster. Players are saved across sessions so you only set them up once.</dd>
+
+            <dt>Present Tonight</dt>
+            <dd>Tap a player to toggle them <strong>In</strong> or <strong>Out</strong>. Only "In" players are assigned to courts when you shuffle.</dd>
+
+            <dt>Court Preferences</dt>
+            <dd>Set a preferred court for a player using the dropdown next to their name. They'll be placed on that court first when possible.</dd>
+
+            <dt>Courts</dt>
+            <dd>Use <strong>−</strong> / <strong>+</strong> to set how many courts are open. Click any court name to rename it.</dd>
+
+            <dt>Shuffle</dt>
+            <dd>Tap <strong>Shuffle</strong> to randomly assign present players to courts.<br>
+              2 players → Singles &nbsp;·&nbsp; 3 → Cutthroat &nbsp;·&nbsp; 4 → Doubles<br>
+              A server is randomly chosen for each court.</dd>
+
+            <dt>Drag &amp; Drop</dt>
+            <dd>After shuffling, drag players between courts or to the bench to fine-tune assignments.</dd>
+
+            <dt>Sharing</dt>
+            <dd>The <strong>Share</strong> button copies a URL. Anyone who opens it gets the gym added to their app — players, court names, and present status all included. If a gym with the same name already exists, a number is appended automatically.</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    ` : ''}
   `
 
   wireEvents()
@@ -525,11 +626,25 @@ function wireEvents() {
     })
     document.getElementById('new-gym-btn')!.addEventListener('click', () => { addingGym = true; render() })
     document.getElementById('rename-gym-btn')!.addEventListener('click', () => { renamingGym = true; render() })
+    document.getElementById('share-gym-btn')?.addEventListener('click', () => {
+      const url = buildShareUrl()
+      const btn = document.getElementById('share-gym-btn') as HTMLButtonElement
+      navigator.clipboard.writeText(url).then(() => {
+        if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Share' }, 2000) }
+      }).catch(() => { prompt('Copy this link:', url) })
+    })
     document.getElementById('delete-gym-btn')?.addEventListener('click', () => {
       if (!confirm(`Delete "${gym().name}" and all its players?`)) return
       appState.removeGym(gym().id); result = null; save(); render()
     })
   }
+
+  // Help modal
+  document.getElementById('help-btn')?.addEventListener('click', () => { showHelp = true; render() })
+  document.getElementById('modal-close')?.addEventListener('click', () => { showHelp = false; render() })
+  document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) { showHelp = false; render() }
+  })
 
   // Pool
   const input = document.getElementById('player-input') as HTMLInputElement
@@ -613,4 +728,5 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;')
 }
 
+loadFromShareParam()
 render()
