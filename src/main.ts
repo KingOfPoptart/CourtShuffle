@@ -52,7 +52,10 @@ function loadFromShareParam(): void {
       }
       const replace = confirm(`A gym named "${baseName}" already exists.\n\nOK to replace it, or Cancel to add it as "${numberedName}".`)
       if (replace) {
-        appState.removeGym(existingGym.id)
+        // Bypass the removeGym UI guard (which blocks deleting the last gym)
+        // so a fresh single-gym user can still replace via a share link.
+        appState.gyms = appState.gyms.filter((g) => g.id !== existingGym.id)
+        if (appState.activeGymId === existingGym.id) appState.activeGymId = ''
       } else {
         finalName = numberedName
       }
