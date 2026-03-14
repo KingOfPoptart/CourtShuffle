@@ -4,7 +4,7 @@ A mobile-first web app for randomly assigning racquetball players to courts.
 
 ## Live Site
 
-Deployed via GitHub Pages: `https://kingofpoptart.github.io/CourtShuffle/`
+Deployed via GitHub Pages: [https://kingofpoptart.github.io/CourtShuffle/](https://kingofpoptart.github.io/CourtShuffle/)
 
 ## Features
 
